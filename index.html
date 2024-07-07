@@ -4,41 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Voice-Controlled DeFi with Brian</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        button { font-size: 18px; padding: 10px 20px; margin: 10px; }
-        #result, #brian-response { margin-top: 20px; border: 1px solid #ddd; padding: 10px; min-height: 100px; }
-        #connect-metamask-btn, #send-transaction-btn, #new-transaction-btn { 
-            background-color: #4CAF50; 
-            color: white; 
-            border: none; 
-            padding: 15px 32px; 
-            text-align: center; 
-            text-decoration: none; 
-            display: inline-block; 
-            font-size: 16px; 
-            margin: 4px 2px; 
-            cursor: pointer; 
-        }
-        #send-transaction-btn, #new-transaction-btn { display: none; }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Voice-Controlled DeFi with Brian</h1>
-    <button id="connect-metamask-btn">Connect to MetaMask</button>
-    <button id="startButton">Start Listening</button>
-    <button id="stopButton" disabled>Stop Listening</button>
-    <div id="result">
-        <p>Your voice input will appear here...</p>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <h1 class="text-3xl font-bold text-center mb-8 text-black">Voice-Controlled DeFi with Brian</h1>
+        
+        <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <div class="flex flex-wrap justify-between gap-4 mb-6">
+                <button id="connect-wallet-btn" class="btn bg-green-400 hover:bg-green-500">Connect Wallet</button>
+                <button id="startButton" class="btn bg-blue-400 hover:bg-blue-500">Start Listening</button>
+                <button id="stopButton" class="btn bg-red-400 hover:bg-red-500" disabled>Stop Listening</button>
+            </div>
+            
+            <div id="result" class="bg-gray-100 p-4 rounded-md mb-4 min-h-[100px]">
+                <p class="text-gray-600">Your voice input will appear here...</p>
+            </div>
+            
+            <div id="brian-response" class="bg-gray-100 p-4 rounded-md mb-4 min-h-[100px]">
+                <p class="text-gray-600">Brian's response will appear here...</p>
+            </div>
+            
+            <div class="flex flex-wrap justify-between gap-4">
+                <button id="send-transaction-btn" class="btn bg-purple-400 hover:bg-purple-500 hidden">Send Transaction</button>
+                <button id="new-transaction-btn" class="btn bg-yellow-400 hover:bg-yellow-500 hidden">Start New Transaction</button>
+            </div>
+        </div>
+
+        <div id="transaction-history" class="bg-white shadow-md rounded-lg p-6 mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-4 text-black">Transaction History</h2>
+            <ul id="history-list" class="space-y-2"></ul>
+        </div>
     </div>
-    <div id="brian-response">
-        <p>Brian's response will appear here...</p>
-    </div>
-    <button id="send-transaction-btn">Send Transaction</button>
-    <button id="new-transaction-btn">Start New Transaction</button>
 
     <script>
-        const connectMetaMaskBtn = document.getElementById('connect-metamask-btn');
+        const connectWalletBtn = document.getElementById('connect-wallet-btn');
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
         const resultDiv = document.getElementById('result');
@@ -49,25 +49,27 @@
         let currentTransaction = null;
         let connectedAccount = null;
 
-        async function connectMetaMask() {
+        async function connectWallet() {
             if (typeof window.ethereum !== 'undefined') {
                 try {
                     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     connectedAccount = accounts[0];
-                    console.log('Connected to MetaMask:', connectedAccount);
-                    connectMetaMaskBtn.textContent = 'MetaMask Connected';
-                    connectMetaMaskBtn.disabled = true;
+                    console.log('Connected to wallet:', connectedAccount);
+                    connectWalletBtn.textContent = 'Wallet Connected';
+                    connectWalletBtn.disabled = true;
+                    connectWalletBtn.classList.add('bg-gray-400', 'hover:bg-gray-400');
+                    connectWalletBtn.classList.remove('bg-green-400', 'hover:bg-green-500');
                     startButton.disabled = false;
                 } catch (error) {
-                    console.error('Failed to connect to MetaMask:', error);
-                    alert('Failed to connect to MetaMask. Please try again.');
+                    console.error('Failed to connect wallet:', error);
+                    alert('Failed to connect wallet. Please try again.');
                 }
             } else {
-                alert('MetaMask is not installed. Please install it to use this app.');
+                alert('No Web3 wallet detected. Please install MetaMask or use Coinbase Wallet.');
             }
         }
 
-        connectMetaMaskBtn.addEventListener('click', connectMetaMask);
+        connectWalletBtn.addEventListener('click', connectWallet);
 
         if (!('webkitSpeechRecognition' in window)) {
             alert("Your browser doesn't support speech recognition. Please use Chrome.");
@@ -82,19 +84,19 @@
                 console.log('Speech recognition started');
                 startButton.disabled = true;
                 stopButton.disabled = false;
-                resultDiv.innerHTML = '<p>Listening...</p>';
+                resultDiv.innerHTML = '<p class="text-gray-600">Listening...</p>';
             };
 
             recognition.onresult = function(event) {
                 const result = event.results[0][0].transcript;
                 console.log('Result: ' + result);
-                resultDiv.innerHTML = '<p>You said: ' + result + '</p>';
+                resultDiv.innerHTML = '<p class="text-gray-800">You said: ' + result + '</p>';
                 processWithBrian(result);
             };
 
             recognition.onerror = function(event) {
                 console.error('Speech recognition error:', event.error);
-                resultDiv.innerHTML = '<p>Error: ' + event.error + '</p>';
+                resultDiv.innerHTML = '<p class="text-red-600">Error: ' + event.error + '</p>';
             };
 
             recognition.onend = function() {
@@ -105,7 +107,7 @@
 
             startButton.onclick = function() {
                 if (!connectedAccount) {
-                    alert('Please connect to MetaMask first.');
+                    alert('Please connect your wallet first.');
                     return;
                 }
                 recognition.start();
@@ -116,12 +118,12 @@
             };
 
             async function processWithBrian(text) {
-                brianResponseDiv.innerHTML = '<p>Processing with Brian...</p>';
+                brianResponseDiv.innerHTML = '<p class="text-gray-600">Processing with Brian...</p>';
                 
                 text = text.replace(/ethereum/i, "eth");
                 
                 if (!connectedAccount) {
-                    brianResponseDiv.innerHTML = '<p>Please connect to MetaMask to continue.</p>';
+                    brianResponseDiv.innerHTML = '<p class="text-red-600">Please connect your wallet to continue.</p>';
                     return;
                 }
 
@@ -143,17 +145,17 @@
                     handleBrianResponse(data);
                 } catch (error) {
                     console.error('Error processing with Brian:', error);
-                    brianResponseDiv.innerHTML = '<p>Error processing with Brian: ' + error.message + '</p>';
+                    brianResponseDiv.innerHTML = '<p class="text-red-600">Error processing with Brian: ' + error.message + '</p>';
                 }
             }
 
             function handleBrianResponse(data) {
                 console.log('Brian response:', data);
-                let responseHtml = '<h3>Brian\'s Response:</h3>';
+                let responseHtml = '<h3 class="text-lg font-semibold mb-2">Brian\'s Response:</h3>';
                 
                 if (data.error) {
-                    responseHtml += `<p>Error: ${data.error}</p>`;
-                    responseHtml += '<p>Please try rephrasing your command. For example: "swap 10 usdc to eth on base"</p>';
+                    responseHtml += `<p class="text-red-600">Error: ${data.error}</p>`;
+                    responseHtml += '<p class="text-gray-600">Please try rephrasing your command. For example: "swap 10 usdc to eth on base"</p>';
                     currentTransaction = null;
                     sendTransactionBtn.style.display = 'none';
                 } else if (data.result) {
@@ -161,29 +163,29 @@
                         const transaction = data.result[0];
                         currentTransaction = transaction;
                         responseHtml += `
-                            <p>Action: ${transaction.action || 'N/A'}</p>
-                            <p>Type: ${transaction.type || 'N/A'}</p>
-                            <p>Description: ${transaction.data?.description || 'N/A'}</p>
-                            <p>From Chain: ${transaction.data?.fromChainId || 'N/A'}</p>
-                            <p>To Chain: ${transaction.data?.toChainId || 'N/A'}</p>
-                            <p>From Amount: ${transaction.data?.fromAmount || 'N/A'} ${transaction.data?.fromToken?.symbol || 'N/A'}</p>
-                            <p>To Amount: ${transaction.data?.toAmount || 'N/A'} ${transaction.data?.toToken?.symbol || 'N/A'}</p>
+                            <p><strong>Action:</strong> ${transaction.action || 'N/A'}</p>
+                            <p><strong>Type:</strong> ${transaction.type || 'N/A'}</p>
+                            <p><strong>Description:</strong> ${transaction.data?.description || 'N/A'}</p>
+                            <p><strong>From Chain:</strong> ${transaction.data?.fromChainId || 'N/A'}</p>
+                            <p><strong>To Chain:</strong> ${transaction.data?.toChainId || 'N/A'}</p>
+                            <p><strong>From Amount:</strong> ${transaction.data?.fromAmount || 'N/A'} ${transaction.data?.fromToken?.symbol || 'N/A'}</p>
+                            <p><strong>To Amount:</strong> ${transaction.data?.toAmount || 'N/A'} ${transaction.data?.toToken?.symbol || 'N/A'}</p>
                         `;
                         sendTransactionBtn.style.display = 'block';
                         newTransactionBtn.style.display = 'block';
                     } else if (typeof data.result === 'object') {
-                        responseHtml += '<pre>' + JSON.stringify(data.result, null, 2) + '</pre>';
+                        responseHtml += '<pre class="bg-gray-200 p-2 rounded">' + JSON.stringify(data.result, null, 2) + '</pre>';
                         currentTransaction = null;
                         sendTransactionBtn.style.display = 'none';
                         newTransactionBtn.style.display = 'block';
                     } else {
-                        responseHtml += '<p>Unexpected result format. Check console for details.</p>';
+                        responseHtml += '<p class="text-yellow-600">Unexpected result format. Check console for details.</p>';
                         currentTransaction = null;
                         sendTransactionBtn.style.display = 'none';
                         newTransactionBtn.style.display = 'block';
                     }
                 } else {
-                    responseHtml += '<p>No transaction data received from Brian. Check console for full response.</p>';
+                    responseHtml += '<p class="text-yellow-600">No transaction data received from Brian. Check console for full response.</p>';
                     currentTransaction = null;
                     sendTransactionBtn.style.display = 'none';
                     newTransactionBtn.style.display = 'block';
@@ -199,7 +201,7 @@
                 }
 
                 if (!connectedAccount) {
-                    alert('Please connect to MetaMask to send the transaction.');
+                    alert('Please connect your wallet to send the transaction.');
                     return;
                 }
 
@@ -217,11 +219,12 @@
                         params: [transactionParameters],
                     });
                     console.log('Transaction sent:', txHash);
-                    brianResponseDiv.innerHTML += `<p>Transaction sent! Hash: ${txHash}</p>`;
+                    brianResponseDiv.innerHTML += `<p class="text-green-600 font-semibold mt-4">Transaction sent! Hash: ${txHash}</p>`;
                     newTransactionBtn.style.display = 'block';
+                    addToTransactionHistory(txHash);
                 } catch (error) {
                     console.error('Error sending transaction:', error);
-                    brianResponseDiv.innerHTML += `<p>Error sending transaction: ${error.message}</p>`;
+                    brianResponseDiv.innerHTML += `<p class="text-red-600 font-semibold mt-4">Error sending transaction: ${error.message}</p>`;
                 }
             }
 
@@ -229,11 +232,25 @@
                 location.reload();
             }
 
+            function addToTransactionHistory(txHash) {
+                const historyList = document.getElementById('history-list');
+                const listItem = document.createElement('li');
+                listItem.className = 'bg-gray-100 p-2 rounded';
+                listItem.innerHTML = `Transaction: <a href="https://etherscan.io/tx/${txHash}" target="_blank" class="text-blue-500 hover:underline">${txHash.substr(0, 10)}...</a>`;
+                historyList.prepend(listItem);
+                document.getElementById('transaction-history').classList.remove('hidden');
+            }
+
             sendTransactionBtn.addEventListener('click', sendTransaction);
             newTransactionBtn.addEventListener('click', startNewTransaction);
 
-            // Initially disable the Start Listening button until MetaMask is connected
+            // Initially disable the Start Listening button until wallet is connected
             startButton.disabled = true;
+
+            // Apply Tailwind classes to buttons
+            document.querySelectorAll('.btn').forEach(button => {
+                button.classList.add('px-4', 'py-2', 'text-white', 'rounded', 'transition', 'duration-300', 'ease-in-out', 'w-full', 'sm:w-auto');
+            });
         }
     </script>
 </body>
