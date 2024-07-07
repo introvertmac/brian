@@ -3,17 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice-Controlled DeFi with Brian and MetaMask</title>
+    <title>Voice-Controlled DeFi with Brian</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
         button { font-size: 18px; padding: 10px 20px; margin: 10px; }
         #result, #brian-response { margin-top: 20px; border: 1px solid #ddd; padding: 10px; min-height: 100px; }
-        #connect-metamask-btn, #send-transaction-btn { background-color: #4CAF50; color: white; border: none; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; }
-        #send-transaction-btn { display: none; }
+        #connect-metamask-btn, #send-transaction-btn, #new-transaction-btn { 
+            background-color: #4CAF50; 
+            color: white; 
+            border: none; 
+            padding: 15px 32px; 
+            text-align: center; 
+            text-decoration: none; 
+            display: inline-block; 
+            font-size: 16px; 
+            margin: 4px 2px; 
+            cursor: pointer; 
+        }
+        #send-transaction-btn, #new-transaction-btn { display: none; }
     </style>
 </head>
 <body>
-    <h1>Voice-Controlled DeFi with Brian and MetaMask</h1>
+    <h1>Voice-Controlled DeFi with Brian</h1>
     <button id="connect-metamask-btn">Connect to MetaMask</button>
     <button id="startButton">Start Listening</button>
     <button id="stopButton" disabled>Stop Listening</button>
@@ -24,6 +35,7 @@
         <p>Brian's response will appear here...</p>
     </div>
     <button id="send-transaction-btn">Send Transaction</button>
+    <button id="new-transaction-btn">Start New Transaction</button>
 
     <script>
         const connectMetaMaskBtn = document.getElementById('connect-metamask-btn');
@@ -32,6 +44,7 @@
         const resultDiv = document.getElementById('result');
         const brianResponseDiv = document.getElementById('brian-response');
         const sendTransactionBtn = document.getElementById('send-transaction-btn');
+        const newTransactionBtn = document.getElementById('new-transaction-btn');
 
         let currentTransaction = null;
         let connectedAccount = null;
@@ -157,19 +170,23 @@
                             <p>To Amount: ${transaction.data?.toAmount || 'N/A'} ${transaction.data?.toToken?.symbol || 'N/A'}</p>
                         `;
                         sendTransactionBtn.style.display = 'block';
+                        newTransactionBtn.style.display = 'block';
                     } else if (typeof data.result === 'object') {
                         responseHtml += '<pre>' + JSON.stringify(data.result, null, 2) + '</pre>';
                         currentTransaction = null;
                         sendTransactionBtn.style.display = 'none';
+                        newTransactionBtn.style.display = 'block';
                     } else {
                         responseHtml += '<p>Unexpected result format. Check console for details.</p>';
                         currentTransaction = null;
                         sendTransactionBtn.style.display = 'none';
+                        newTransactionBtn.style.display = 'block';
                     }
                 } else {
                     responseHtml += '<p>No transaction data received from Brian. Check console for full response.</p>';
                     currentTransaction = null;
                     sendTransactionBtn.style.display = 'none';
+                    newTransactionBtn.style.display = 'block';
                 }
                 
                 brianResponseDiv.innerHTML = responseHtml;
@@ -201,13 +218,19 @@
                     });
                     console.log('Transaction sent:', txHash);
                     brianResponseDiv.innerHTML += `<p>Transaction sent! Hash: ${txHash}</p>`;
+                    newTransactionBtn.style.display = 'block';
                 } catch (error) {
                     console.error('Error sending transaction:', error);
                     brianResponseDiv.innerHTML += `<p>Error sending transaction: ${error.message}</p>`;
                 }
             }
 
+            function startNewTransaction() {
+                location.reload();
+            }
+
             sendTransactionBtn.addEventListener('click', sendTransaction);
+            newTransactionBtn.addEventListener('click', startNewTransaction);
 
             // Initially disable the Start Listening button until MetaMask is connected
             startButton.disabled = true;
