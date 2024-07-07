@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Controlled DeFi with Brian and MetaMask</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        button { font-size: 18px; padding: 10px 20px; margin: 10px; }
+        #result, #brian-response { margin-top: 20px; border: 1px solid #ddd; padding: 10px; min-height: 100px; }
+        #connect-metamask-btn, #send-transaction-btn { background-color: #4CAF50; color: white; border: none; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer; }
+        #send-transaction-btn { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Voice-Controlled DeFi with Brian and MetaMask</h1>
+    <button id="connect-metamask-btn">Connect to MetaMask</button>
+    <button id="startButton">Start Listening</button>
+    <button id="stopButton" disabled>Stop Listening</button>
+    <div id="result">
+        <p>Your voice input will appear here...</p>
+    </div>
+    <div id="brian-response">
+        <p>Brian's response will appear here...</p>
+    </div>
+    <button id="send-transaction-btn">Send Transaction</button>
+
+    <script>
+        const connectMetaMaskBtn = document.getElementById('connect-metamask-btn');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const resultDiv = document.getElementById('result');
+        const brianResponseDiv = document.getElementById('brian-response');
+        const sendTransactionBtn = document.getElementById('send-transaction-btn');
+
+        let currentTransaction = null;
+        let connectedAccount = null;
+
+        async function connectMetaMask() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    connectedAccount = accounts[0];
+                    console.log('Connected to MetaMask:', connectedAccount);
+                    connectMetaMaskBtn.textContent = 'MetaMask Connected';
+                    connectMetaMaskBtn.disabled = true;
+                    startButton.disabled = false;
+                } catch (error) {
+                    console.error('Failed to connect to MetaMask:', error);
+                    alert('Failed to connect to MetaMask. Please try again.');
+                }
+            } else {
+                alert('MetaMask is not installed. Please install it to use this app.');
+            }
+        }
+
+        connectMetaMaskBtn.addEventListener('click', connectMetaMask);
+
+        if (!('webkitSpeechRecognition' in window)) {
+            alert("Your browser doesn't support speech recognition. Please use Chrome.");
+        } else {
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onstart = function() {
+                console.log('Speech recognition started');
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                resultDiv.innerHTML = '<p>Listening...</p>';
+            };
+
+            recognition.onresult = function(event) {
+                const result = event.results[0][0].transcript;
+                console.log('Result: ' + result);
+                resultDiv.innerHTML = '<p>You said: ' + result + '</p>';
+                processWithBrian(result);
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                resultDiv.innerHTML = '<p>Error: ' + event.error + '</p>';
+            };
+
+            recognition.onend = function() {
+                console.log('Speech recognition ended');
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            };
+
+            startButton.onclick = function() {
+                if (!connectedAccount) {
+                    alert('Please connect to MetaMask first.');
+                    return;
+                }
+                recognition.start();
+            };
+
+            stopButton.onclick = function() {
+                recognition.stop();
+            };
+
+            async function processWithBrian(text) {
+                brianResponseDiv.innerHTML = '<p>Processing with Brian...</p>';
+                
+                text = text.replace(/ethereum/i, "eth");
+                
+                if (!connectedAccount) {
+                    brianResponseDiv.innerHTML = '<p>Please connect to MetaMask to continue.</p>';
+                    return;
+                }
+
+                try {
+                    const response = await fetch('https://api.brianknows.org/api/v0/agent/transaction', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-brian-api-key': 'brian_BlFEsu3GVEKafBKRW'
+                        },
+                        body: JSON.stringify({
+                            prompt: text,
+                            address: connectedAccount
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    console.log('Full Brian API response:', data);
+                    handleBrianResponse(data);
+                } catch (error) {
+                    console.error('Error processing with Brian:', error);
+                    brianResponseDiv.innerHTML = '<p>Error processing with Brian: ' + error.message + '</p>';
+                }
+            }
+
+            function handleBrianResponse(data) {
+                console.log('Brian response:', data);
+                let responseHtml = '<h3>Brian\'s Response:</h3>';
+                
+                if (data.error) {
+                    responseHtml += `<p>Error: ${data.error}</p>`;
+                    responseHtml += '<p>Please try rephrasing your command. For example: "swap 10 usdc to eth on base"</p>';
+                    currentTransaction = null;
+                    sendTransactionBtn.style.display = 'none';
+                } else if (data.result) {
+                    if (Array.isArray(data.result) && data.result.length > 0) {
+                        const transaction = data.result[0];
+                        currentTransaction = transaction;
+                        responseHtml += `
+                            <p>Action: ${transaction.action || 'N/A'}</p>
+                            <p>Type: ${transaction.type || 'N/A'}</p>
+                            <p>Description: ${transaction.data?.description || 'N/A'}</p>
+                            <p>From Chain: ${transaction.data?.fromChainId || 'N/A'}</p>
+                            <p>To Chain: ${transaction.data?.toChainId || 'N/A'}</p>
+                            <p>From Amount: ${transaction.data?.fromAmount || 'N/A'} ${transaction.data?.fromToken?.symbol || 'N/A'}</p>
+                            <p>To Amount: ${transaction.data?.toAmount || 'N/A'} ${transaction.data?.toToken?.symbol || 'N/A'}</p>
+                        `;
+                        sendTransactionBtn.style.display = 'block';
+                    } else if (typeof data.result === 'object') {
+                        responseHtml += '<pre>' + JSON.stringify(data.result, null, 2) + '</pre>';
+                        currentTransaction = null;
+                        sendTransactionBtn.style.display = 'none';
+                    } else {
+                        responseHtml += '<p>Unexpected result format. Check console for details.</p>';
+                        currentTransaction = null;
+                        sendTransactionBtn.style.display = 'none';
+                    }
+                } else {
+                    responseHtml += '<p>No transaction data received from Brian. Check console for full response.</p>';
+                    currentTransaction = null;
+                    sendTransactionBtn.style.display = 'none';
+                }
+                
+                brianResponseDiv.innerHTML = responseHtml;
+            }
+
+            async function sendTransaction() {
+                if (!currentTransaction) {
+                    console.error('No transaction data available');
+                    return;
+                }
+
+                if (!connectedAccount) {
+                    alert('Please connect to MetaMask to send the transaction.');
+                    return;
+                }
+
+                const transactionParameters = {
+                    to: currentTransaction.data.steps[0].to,
+                    from: connectedAccount,
+                    value: currentTransaction.data.steps[0].value || '0x0',
+                    data: currentTransaction.data.steps[0].data,
+                    chainId: currentTransaction.data.fromChainId,
+                };
+
+                try {
+                    const txHash = await window.ethereum.request({
+                        method: 'eth_sendTransaction',
+                        params: [transactionParameters],
+                    });
+                    console.log('Transaction sent:', txHash);
+                    brianResponseDiv.innerHTML += `<p>Transaction sent! Hash: ${txHash}</p>`;
+                } catch (error) {
+                    console.error('Error sending transaction:', error);
+                    brianResponseDiv.innerHTML += `<p>Error sending transaction: ${error.message}</p>`;
+                }
+            }
+
+            sendTransactionBtn.addEventListener('click', sendTransaction);
+
+            // Initially disable the Start Listening button until MetaMask is connected
+            startButton.disabled = true;
+        }
+    </script>
+</body>
+</html>
