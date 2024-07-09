@@ -53,6 +53,9 @@
             if (typeof window.ethereum !== 'undefined') {
                 try {
                     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    if (accounts.length === 0) {
+                        throw new Error('No accounts found');
+                    }
                     connectedAccount = accounts[0];
                     console.log('Connected to wallet:', connectedAccount);
                     connectWalletBtn.textContent = 'Wallet Connected';
@@ -62,17 +65,17 @@
                     startButton.disabled = false;
                 } catch (error) {
                     console.error('Failed to connect wallet:', error);
-                    alert('Failed to connect wallet. Please try again.');
+                    alert(`Failed to connect wallet: ${error.message}`);
                 }
             } else {
-                alert('No Web3 wallet detected. Please install MetaMask or use Coinbase Wallet.');
+                alert('No Web3 wallet detected. Please install MetaMask or use a compatible wallet.');
             }
         }
 
         connectWalletBtn.addEventListener('click', connectWallet);
 
         if (!('webkitSpeechRecognition' in window)) {
-            alert("Your browser doesn't support speech recognition. Please use Chrome.");
+            alert("Your browser doesn't support speech recognition. Please use a compatible browser.");
         } else {
             const recognition = new webkitSpeechRecognition();
             recognition.continuous = false;
@@ -97,6 +100,8 @@
             recognition.onerror = function(event) {
                 console.error('Speech recognition error:', event.error);
                 resultDiv.innerHTML = '<p class="text-red-600">Error: ' + event.error + '</p>';
+                startButton.disabled = false;
+                stopButton.disabled = true;
             };
 
             recognition.onend = function() {
@@ -139,6 +144,10 @@
                             address: connectedAccount
                         })
                     });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     
                     const data = await response.json();
                     console.log('Full Brian API response:', data);
@@ -197,6 +206,7 @@
             async function sendTransaction() {
                 if (!currentTransaction) {
                     console.error('No transaction data available');
+                    brianResponseDiv.innerHTML += '<p class="text-red-600 font-semibold mt-4">Error: No transaction data available</p>';
                     return;
                 }
 
@@ -244,10 +254,8 @@
             sendTransactionBtn.addEventListener('click', sendTransaction);
             newTransactionBtn.addEventListener('click', startNewTransaction);
 
-            // Initially disable the Start Listening button until wallet is connected
             startButton.disabled = true;
 
-            // Apply Tailwind classes to buttons
             document.querySelectorAll('.btn').forEach(button => {
                 button.classList.add('px-4', 'py-2', 'text-white', 'rounded', 'transition', 'duration-300', 'ease-in-out', 'w-full', 'sm:w-auto');
             });
